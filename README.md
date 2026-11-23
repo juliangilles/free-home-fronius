@@ -15,10 +15,11 @@ Ein free@home Add-On, das die Live-Daten eines Fronius Wechselrichters und des F
 3. [Installation](#installation)
 4. [Einstellungen](#einstellungen)
 5. [Geräte und Werte in free@home](#geräte-und-werte-in-freehome)
-6. [Funktionsweise](#funktionsweise)
-7. [Fehlersuche](#fehlersuche)
-8. [Entwicklung](#entwicklung)
-9. [Lizenz](#lizenz)
+6. [Ansicht in free@home](#ansicht-in-freehome)
+7. [Funktionsweise](#funktionsweise)
+8. [Fehlersuche](#fehlersuche)
+9. [Entwicklung](#entwicklung)
+10. [Lizenz](#lizenz)
 
 ---
 
@@ -106,6 +107,31 @@ Die Leistung wird positiv gemeldet. Die SDK-Doku beschreibt für Wechselrichter 
 
 Gibt es mehrere Zähler, verwendet das Add-On den Zähler am Einspeisepunkt (`Meter_Location_Current = 0`).
 
+## Ansicht in free@home
+
+Im **Energie-Management** der free@home App erscheinen Netz, PV und der daraus berechnete Haushaltsverbrauch:
+
+<p>
+  <img src="docs/images/freeathome-uebersicht.png" alt="free@home Energie-Management: Übersicht mit Netz, PV und Haushalt" width="386">
+  <img src="docs/images/freeathome-detail.png" alt="free@home Energie-Management: Detailansicht mit Energiefluss" width="391">
+</p>
+
+Die Detailansicht zeigt den Energiefluss: Die PV-Erzeugung fließt ins Haus, der Überschuss wird ins Netz eingespeist (Pfeil vom Haus zum Netz). Bei Netzbezug zeigt der Pfeil vom Netz ins Haus.
+
+### Vergleich mit der Fronius-Ansicht
+
+<img src="docs/images/fronius-vergleich.png" alt="Fronius Weboberfläche: Aktuelle Leistung" width="420">
+
+Die gleiche Situation in der Weboberfläche des Fronius Wechselrichters:
+
+| | Fronius | free@home |
+|---|---|---|
+| PV | 561 W | 539 W |
+| Netz | 91 W Einspeisung | 102 W Einspeisung |
+| Haushalt | 439 W | 437 W |
+
+Kleine Abweichungen sind normal: Die Ansichten wurden nicht exakt gleichzeitig aufgenommen, und Fronius zeigt die PV-Leistung vor dem Wechselrichter (DC), das Add-On meldet die AC-Leistung danach.
+
 ## Funktionsweise
 
 ```
@@ -166,7 +192,7 @@ Im Tab **Protokoll** des Add-Ons stehen die Meldungen des Add-Ons:
 │   ├── fronius.ts               # Client für die Fronius Solar API v1
 │   ├── dailyEnergy.ts           # Tageswerte aus Zählerständen berechnen
 │   └── probe.ts                 # Testskript: nur Fronius abfragen
-└── docs/images/                 # Bilder für diese Doku
+└── docs/images/                 # Screenshots für diese Doku
 ```
 
 ### Befehle
