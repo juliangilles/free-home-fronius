@@ -33,7 +33,7 @@ Ein free@home Add-On, das die Live-Daten eines Fronius Wechselrichters und des F
   - **Fronius Wechselrichter:** PV-Leistung, Tages- und Gesamtertrag, Eigenverbrauch und Autarkie
   - **Fronius Smart Meter:** Netzleistung, Überschuss, Bezug und Einspeisung (heute und gesamt)
 - Berechnet die Tageswerte selbst, falls der Wechselrichter keine liefert (z. B. beim GEN24).
-- Meldet die Geräte als *nicht erreichbar*, wenn der Wechselrichter nicht antwortet, und stellt sie automatisch wieder her.
+- Meldet die Geräte als *nicht erreichbar*, wenn der Wechselrichter nicht antwortet, und stellt sie automatisch wieder her (abschaltbar, um Offline-Meldungen zu vermeiden).
 - IP-Adresse, Port und Abfrageintervall lassen sich in der free@home-Oberfläche einstellen.
 
 Getestet mit einem **Fronius GEN24** und einem **Fronius Smart Meter 63A** (ohne Batterie).
@@ -76,6 +76,7 @@ Danach erscheinen die Geräte *Fronius Wechselrichter* und *Fronius Smart Meter*
 | **IP-Adresse Wechselrichter** | IP-Adresse des Fronius Wechselrichters im lokalen Netz | `192.168.150.10` | gültige IPv4-Adresse |
 | **HTTP-Port** | Port der Fronius-Weboberfläche bzw. Solar API | `8080` | 1–65535 |
 | **Abfrageintervall (Sekunden)** | Abstand zwischen zwei Abfragen | `10` | 2–300 |
+| **Geräte als offline melden, wenn der Wechselrichter nicht erreichbar ist** | Wenn aktiv, markiert das Add-On seine Geräte bei einem Verbindungsfehler als offline, und free@home zeigt eine Meldung („Stromzähler offline“). Wenn deaktiviert, kommt keine Meldung, und die letzten Werte bleiben stehen. | an | an/aus |
 
 Änderungen werden sofort übernommen, das Add-On muss nicht neu gestartet werden.
 
@@ -164,7 +165,7 @@ Der GEN24 liefert keinen Tagesertrag (`E_Day` ist `null`), und das Smart Meter k
 
 ### Verbindungsabbruch
 
-Antwortet der Wechselrichter nicht (z. B. nachts im Standby oder bei Netzwerkproblemen), werden beide Geräte in free@home als *nicht erreichbar* markiert. Sobald wieder Daten kommen, werden sie automatisch wieder aktiv.
+Antwortet der Wechselrichter nicht (z. B. nachts im Standby oder bei Netzwerkproblemen), werden beide Geräte in free@home als *nicht erreichbar* markiert, und free@home zeigt eine Offline-Meldung. Sobald wieder Daten kommen, werden sie automatisch wieder aktiv. Wer die Meldungen nicht möchte, schaltet in den Einstellungen *Geräte als offline melden* aus. Dann bleiben die letzten Werte stehen, bis wieder Daten kommen.
 
 ## Fehlersuche
 
@@ -257,7 +258,7 @@ A free@home add-on that reads live data from a Fronius inverter and the Fronius 
   - **Fronius Wechselrichter** (inverter): PV power, energy today and total, self-consumption and self-sufficiency
   - **Fronius Smart Meter** (grid meter): grid power, excess power, imported and exported energy (today and total)
 - Calculates daily values itself if the inverter doesn't provide them (e.g. GEN24).
-- Marks the devices as *unresponsive* when the inverter doesn't answer and recovers automatically.
+- Marks the devices as *unresponsive* when the inverter doesn't answer and recovers automatically (can be disabled to avoid offline warnings).
 - IP address, port and polling interval are configurable in the free@home UI.
 
 Tested with a **Fronius GEN24** and a **Fronius Smart Meter 63A** (no battery).
@@ -290,6 +291,7 @@ The devices *Fronius Wechselrichter* and *Fronius Smart Meter* then appear in fr
 | **Inverter IP address** | IP address of the Fronius inverter | `192.168.150.10` | valid IPv4 address |
 | **HTTP port** | Port of the Fronius web interface / Solar API | `8080` | 1–65535 |
 | **Polling interval (seconds)** | Time between two queries | `10` | 2–300 |
+| **Report devices as offline when the inverter is unreachable** | If enabled, the devices are marked unresponsive on connection errors and free@home shows an offline warning. If disabled, no warning appears and the last values remain visible. | on | on/off |
 
 Changes are applied immediately. Most Fronius devices use port `80`; an interval of 10–30 seconds is sufficient.
 

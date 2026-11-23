@@ -12,9 +12,11 @@ interface Settings {
   host: string;
   port: number;
   pollInterval: number;
+  /** Geräte bei Verbindungsfehler als offline melden (löst Meldung in free@home aus) */
+  reportOffline: boolean;
 }
 
-const DEFAULTS: Settings = { host: "192.168.150.10", port: 8080, pollInterval: 10 };
+const DEFAULTS: Settings = { host: "192.168.150.10", port: 8080, pollInterval: 10, reportOffline: true };
 
 const freeAtHome = new FreeAtHome();
 freeAtHome.activateSignalHandling();
@@ -52,8 +54,11 @@ async function main() {
       host: String(items.host || DEFAULTS.host),
       port: Number(items.port) || DEFAULTS.port,
       pollInterval: Math.max(2, Number(items.pollInterval) || DEFAULTS.pollInterval),
+      reportOffline: toBool(items.reportOffline, DEFAULTS.reportOffline),
     };
     console.log("Konfiguration:", settings);
+    // Offline-Meldung abgeschaltet: Geräte sofort wieder als erreichbar führen.
+    if (!settings.reportOffline) keepDevicesAlive(true);
     client = new FroniusClient(settings.host, settings.port);
     restartPolling();
   });
@@ -81,22 +86,35 @@ async function poll() {
         `PV ${data.pvPower.toFixed(0)} W, Netz ${data.gridPower.toFixed(0)} W, Haus ${data.loadPower.toFixed(0)} W, ` +
           `Zähler Bezug ${data.gridImportTotal ?? "-"} Wh / Einspeisung ${data.gridExportTotal ?? "-"} Wh`
       );
-      inverter.setAutoKeepAlive(true);
-      gridMeter.setAutoKeepAlive(true);
+      keepDevicesAlive(true);
       online = true;
     }
   } catch (e) {
     console.error("Fronius-Abfrage fehlgeschlagen:", errorText(e));
     if (online) {
       online = false;
-      inverter.setAutoKeepAlive(false);
-      gridMeter.setAutoKeepAlive(false);
-      await inverter.setUnresponsive().catch(() => undefined);
-      await gridMeter.setUnresponsive().catch(() => undefined);
+      if (settings.reportOffline) {
+        keepDevicesAlive(false);
+        await inverter.setUnresponsive().catch(() => undefined);
+        await gridMeter.setUnresponsive().catch(() => undefined);
+      }
     }
   } finally {
     polling = false;
   }
+}
+
+function keepDevicesAlive(value: boolean) {
+  inverter?.setAutoKeepAlive(value);
+  gridMeter?.setAutoKeepAlive(value);
+}
+
+/** Wert aus der Konfiguration als Boolean lesen (kann als Text ankommen). */
+function toBool(v: unknown, fallback: boolean): boolean {
+  if (typeof v === "boolean") return v;
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return fallback;
 }
 
 const fmt = (v: number, digits = 0) => v.toFixed(digits);
