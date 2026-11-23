@@ -6,6 +6,8 @@ Ein free@home Add-On, das die Live-Daten eines Fronius Wechselrichters und des F
 - **Autor:** Julian Gilles
 - **Lizenz:** MIT
 
+🇬🇧 **English version:** [see below](#english)
+
 ---
 
 ## Inhalt
@@ -20,6 +22,7 @@ Ein free@home Add-On, das die Live-Daten eines Fronius Wechselrichters und des F
 8. [Fehlersuche](#fehlersuche)
 9. [Entwicklung](#entwicklung)
 10. [Lizenz](#lizenz)
+11. [English](#english)
 
 ---
 
@@ -234,3 +237,113 @@ Das erzeugt `de.julian-gilles.fronius-<version>.tar` im Projektordner. Für ein 
 ## Lizenz
 
 MIT – siehe [LICENSE](LICENSE). © 2026 Julian Gilles
+
+---
+
+## English
+
+A free@home add-on that reads live data from a Fronius inverter and the Fronius Smart Meter and provides them as energy devices in free@home. PV production, grid import and grid feed-in show up directly in the energy monitor of the free@home app.
+
+- **Add-on ID:** `de.julian-gilles.fronius`
+- **Author:** Julian Gilles
+- **License:** MIT
+
+### Features
+
+- Reads the **Fronius Solar API v1** locally. No cloud or Fronius account required.
+- Creates two virtual devices in free@home:
+  - **Fronius Wechselrichter** (inverter): PV power, energy today and total, self-consumption and self-sufficiency
+  - **Fronius Smart Meter** (grid meter): grid power, excess power, imported and exported energy (today and total)
+- Calculates daily values itself if the inverter doesn't provide them (e.g. GEN24).
+- Marks the devices as *unresponsive* when the inverter doesn't answer and recovers automatically.
+- IP address, port and polling interval are configurable in the free@home UI.
+
+Tested with a **Fronius GEN24** and a **Fronius Smart Meter 63A** (no battery).
+
+### Requirements
+
+| Component | Requirement |
+|---|---|
+| free@home | System Access Point (SysAP) 3.0.0 or newer with add-on support |
+| Fronius | Inverter with Solar API v1 (e.g. GEN24, Symo, Primo with Datamanager) |
+| Network | SysAP must be able to reach the inverter |
+| Smart Meter | optional; without it the grid values stay empty |
+
+**Enable the Solar API:** On newer Fronius devices the Solar API is often disabled by default. Enable it in the inverter's web interface under *Communication → Solar API*. To check, open `http://<inverter-ip>:<port>/solar_api/v1/GetPowerFlowRealtimeData.fcgi` in a browser; it should return JSON.
+
+### Installation
+
+1. Download the add-on package `de.julian-gilles.fronius-<version>.tar` or build it yourself (`npm install && npm run pack`).
+2. Open the SysAP web interface and go to the add-on section. Developer mode must be enabled for custom add-ons.
+3. Upload and install the `.tar` file.
+4. Open the add-on **Fronius Wechselrichter** and check the settings.
+5. Set the status to **active**.
+
+The devices *Fronius Wechselrichter* and *Fronius Smart Meter* then appear in free@home and can be assigned to a room.
+
+### Settings
+
+| Setting | Description | Default | Range |
+|---|---|---|---|
+| **Inverter IP address** | IP address of the Fronius inverter | `192.168.150.10` | valid IPv4 address |
+| **HTTP port** | Port of the Fronius web interface / Solar API | `8080` | 1–65535 |
+| **Polling interval (seconds)** | Time between two queries | `10` | 2–300 |
+
+Changes are applied immediately. Most Fronius devices use port `80`; an interval of 10–30 seconds is sufficient.
+
+### Values and sign conventions
+
+| Device | Value | Source (Solar API) |
+|---|---|---|
+| Inverter | Current power (positive) | sum of `Inverters[].P` (AC) |
+| Inverter | Energy today / total | `E_Day` or calculated from `E_Total` |
+| Inverter | Self-consumption / self-sufficiency | `Site.rel_SelfConsumption` / `Site.rel_Autonomy` |
+| Grid meter | Current power | `Site.P_Grid` (> 0 import, < 0 feed-in) |
+| Grid meter | Excess power | `max(0, −P_Grid)` |
+| Grid meter | Imported / exported energy | `EnergyReal_WAC_Sum_Consumed` / `_Produced` |
+
+free@home calculates the household consumption as grid + PV. PV power is therefore sent as a **positive** value, even though the SDK documentation describes values ≤ 0 for inverters; with negative values the SysAP shows a negative production and a wrong household value. Total counters are sent as whole kWh, because the SysAP rejects decimals.
+
+### Daily values
+
+The GEN24 doesn't provide a daily yield (`E_Day` is `null`), and neither the Solar API archive (`GetArchiveData.cgi` returns 404 on GEN24) nor the internal web interface offers one. The add-on therefore stores the meter readings at the start of the day in `daily-energy.json` and calculates the daily values as the difference.
+
+- Daily values survive add-on restarts and reset at midnight (SysAP local time).
+- After a **new installation or update**, the daily values start at 0 again for the rest of that day.
+- The GEN24 updates its total counter only every few minutes, so the PV daily value increases in steps.
+
+### Troubleshooting
+
+Check the **Protokoll** (log) tab of the add-on:
+
+| Message | Meaning |
+|---|---|
+| `Verbunden mit Fronius <ip>:<port>` | Connected, everything fine. |
+| `Fronius-Abfrage fehlgeschlagen: Timeout …` | Inverter not reachable; check IP address, port and network. |
+| `Fronius-Abfrage fehlgeschlagen: HTTP 404 …` | Solar API disabled or wrong port. |
+| `<Wert>: konnte nicht gesetzt werden …` | The SysAP rejected a value; the message names the value. |
+| `Tageswerte gesendet: …` | Daily values sent to free@home (logged every 15 minutes). |
+
+### Development
+
+```bash
+npm install
+npm run probe -- 192.168.150.10 8080   # query the inverter only, without SysAP
+npm run validate                       # validate free-at-home-metadata.json
+npm run pack                           # build the add-on package (.tar)
+```
+
+To run the add-on locally against the SysAP (local API must be enabled):
+
+```bash
+export FREEATHOME_BASE_URL=http://<sysap-ip>
+export FREEATHOME_API_USERNAME=installer
+export FREEATHOME_API_PASSWORD=<password>
+npm run dev
+```
+
+For a new release, increase `version` in `free-at-home-metadata.json` and `package.json`.
+
+### License
+
+MIT – see [LICENSE](LICENSE). © 2026 Julian Gilles
