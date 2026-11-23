@@ -2,7 +2,6 @@ import {
   AddOn,
   Capabilities,
   EnergyInverterV2Channel,
-  EnergyOneWayMeterV2Channel,
   EnergyTwoWayMeterV2Channel,
   FreeAtHome,
 } from "@busch-jaeger/free-at-home";
@@ -30,8 +29,6 @@ let online = false;
 
 let inverter: EnergyInverterV2Channel;
 let gridMeter: EnergyTwoWayMeterV2Channel;
-let houseMeter: EnergyOneWayMeterV2Channel;
-const devices = () => [inverter, gridMeter, houseMeter];
 const daily = new DailyEnergy();
 
 async function main() {
@@ -46,12 +43,6 @@ async function main() {
     Capabilities.CAP_ENERGY_TODAY,
     Capabilities.CAP_ENERGY_TOTAL,
     Capabilities.CAP_ENERGY_IMPORT,
-    Capabilities.CAP_ENERGY_EXPORT,
-  ]);
-  houseMeter = await freeAtHome.createEnergyOneWayMeterV2Device("fronius-house", "Fronius Hausverbrauch", [
-    Capabilities.CAP_ENERGY_CURRENT_POWER,
-    Capabilities.CAP_ENERGY_TODAY,
-    Capabilities.CAP_ENERGY_TOTAL,
     Capabilities.CAP_ENERGY_EXPORT,
   ]);
 
@@ -90,17 +81,18 @@ async function poll() {
         `PV ${data.pvPower.toFixed(0)} W, Netz ${data.gridPower.toFixed(0)} W, Haus ${data.loadPower.toFixed(0)} W, ` +
           `Zähler Bezug ${data.gridImportTotal ?? "-"} Wh / Einspeisung ${data.gridExportTotal ?? "-"} Wh`
       );
-      devices().forEach((dev) => dev.setAutoKeepAlive(true));
+      inverter.setAutoKeepAlive(true);
+      gridMeter.setAutoKeepAlive(true);
       online = true;
     }
   } catch (e) {
     console.error("Fronius-Abfrage fehlgeschlagen:", errorText(e));
     if (online) {
       online = false;
-      for (const dev of devices()) {
-        dev.setAutoKeepAlive(false);
-        await dev.setUnresponsive().catch(() => undefined);
-      }
+      inverter.setAutoKeepAlive(false);
+      gridMeter.setAutoKeepAlive(false);
+      await inverter.setUnresponsive().catch(() => undefined);
+      await gridMeter.setUnresponsive().catch(() => undefined);
     }
   } finally {
     polling = false;
@@ -142,7 +134,7 @@ async function set(name: string, value: number | null, digits: number, setter: (
 }
 
 /** Zuletzt gesendete Tageswerte, für das Diagnose-Protokoll. */
-let lastSent: { pvToday: number | null; importToday: number | null; exportToday: number | null; houseToday: number | null; pvTotal: number | null } | undefined;
+let lastSent: { pvToday: number | null; importToday: number | null; exportToday: number | null; pvTotal: number | null } | undefined;
 const DAILY_LOG_INTERVAL_MS = 15 * 60 * 1000;
 let lastDailyLog = 0;
 
@@ -154,16 +146,8 @@ function logDailyIfDue() {
   const wh = (v: number | null) => (v === null ? "-" : `${v.toFixed(0)} Wh`);
   console.log(
     `Tageswerte gesendet: PV heute ${wh(lastSent.pvToday)}, Bezug heute ${wh(lastSent.importToday)}, ` +
-      `Einspeisung heute ${wh(lastSent.exportToday)}, Haus heute ${wh(lastSent.houseToday)} (PV-Zähler ${lastSent.pvTotal?.toFixed(0) ?? "-"} Wh)`
+      `Einspeisung heute ${wh(lastSent.exportToday)} (PV-Zähler ${lastSent.pvTotal?.toFixed(0) ?? "-"} Wh)`
   );
-}
-
-let houseTotalMax: number | null = null;
-
-/** PV + Bezug − Einspeisung, nie negativ; null wenn ein Wert fehlt. */
-function sumOrNull(pv: number | null, imp: number | null, exp: number | null): number | null {
-  if (pv === null || imp === null || exp === null) return null;
-  return Math.max(0, pv + imp - exp);
 }
 
 async function publish(d: FroniusSnapshot) {
@@ -172,15 +156,7 @@ async function publish(d: FroniusSnapshot) {
   const exportToday = daily.delta("gridExport", d.gridExportTotal);
   const kWh = (wh: number | null) => (wh === null ? null : wh / 1000);
 
-  // Hausverbrauch-Energie: Fronius hat keinen eigenen Zähler, daher
-  // Verbrauch = PV-Ertrag + Netzbezug − Einspeisung (Anlage ohne Batterie).
-  const houseToday = sumOrNull(pvToday, importToday, exportToday);
-  const houseTotalRaw = sumOrNull(d.pvEnergyTotal, d.gridImportTotal, d.gridExportTotal);
-  // Die Zähler aktualisieren unterschiedlich schnell (PV nur alle paar Minuten),
-  // daher den Gesamtwert nie kleiner werden lassen.
-  if (houseTotalRaw !== null) houseTotalMax = Math.max(houseTotalMax ?? 0, houseTotalRaw);
-
-  lastSent = { pvToday, importToday, exportToday, houseToday, pvTotal: d.pvEnergyTotal };
+  lastSent = { pvToday, importToday, exportToday, pvTotal: d.pvEnergyTotal };
   logDailyIfDue();
 
   await Promise.all([
@@ -201,11 +177,6 @@ async function publish(d: FroniusSnapshot) {
     set("PV Ertrag gesamt", kWh(d.pvEnergyTotal), 0, (v) => inverter.setTotalEnergyImported(v)),
     set("Eigenverbrauch", d.selfConsumption, 0, (v) => inverter.setSelfConsumption(v)),
     set("Autarkie", d.autonomy, 0, (v) => inverter.setSelfSufficiency(v)),
-
-    // --- Hausverbrauch (Verbrauchszähler) ---
-    set("Haus Leistung", d.loadPower, 0, (v) => houseMeter.setCurrentPowerConsumed(v)),
-    set("Haus Verbrauch heute", houseToday, 0, (v) => houseMeter.setExportedEnergyToday(v)),
-    set("Haus Verbrauch gesamt", kWh(houseTotalMax), 0, (v) => houseMeter.setTotalEnergyExported(v)),
   ]);
 }
 

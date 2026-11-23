@@ -29,10 +29,9 @@ Ein free@home Add-On, das die Live-Daten eines Fronius Wechselrichters und des F
 ## Funktionen
 
 - Liest die **Fronius Solar API v1** lokal im Netzwerk aus. Eine Cloud oder ein Fronius-Konto ist nicht nötig.
-- Legt drei virtuelle Geräte in free@home an:
+- Legt zwei virtuelle Geräte in free@home an:
   - **Fronius Wechselrichter:** PV-Leistung, Tages- und Gesamtertrag, Eigenverbrauch und Autarkie
   - **Fronius Smart Meter:** Netzleistung, Überschuss, Bezug und Einspeisung (heute und gesamt)
-  - **Fronius Hausverbrauch:** aktueller Verbrauch des Hauses, Verbrauch heute und gesamt
 - Berechnet die Tageswerte selbst, falls der Wechselrichter keine liefert (z. B. beim GEN24).
 - Meldet die Geräte als *nicht erreichbar*, wenn der Wechselrichter nicht antwortet, und stellt sie automatisch wieder her.
 - IP-Adresse, Port und Abfrageintervall lassen sich in der free@home-Oberfläche einstellen.
@@ -66,7 +65,7 @@ Liefert die Adresse JSON-Daten, ist alles bereit.
 4. Öffne das Add-On **Fronius Wechselrichter** und prüfe die [Einstellungen](#einstellungen).
 5. Stelle den Status auf **Aktiv**.
 
-Danach erscheinen die Geräte *Fronius Wechselrichter*, *Fronius Smart Meter* und *Fronius Hausverbrauch* in free@home. Dort kannst du sie wie gewohnt einem Raum zuordnen.
+Danach erscheinen die Geräte *Fronius Wechselrichter* und *Fronius Smart Meter* in free@home. Dort kannst du sie wie gewohnt einem Raum zuordnen.
 
 ## Einstellungen
 
@@ -110,16 +109,6 @@ Die Leistung wird positiv gemeldet. Die SDK-Doku beschreibt für Wechselrichter 
 **Vorzeichen der Netzleistung:** positiv = Bezug aus dem Netz, negativ = Einspeisung ins Netz (wie bei Fronius). free@home berechnet den Haushalt als Netz + PV.
 
 Gibt es mehrere Zähler, verwendet das Add-On den Zähler am Einspeisepunkt (`Meter_Location_Current = 0`).
-
-### Fronius Hausverbrauch
-
-| Wert in free@home | Quelle (Solar API) | Einheit |
-|---|---|---|
-| Aktuelle Leistung | `Site.P_Load` (Betrag) | W |
-| Verbrauch heute | PV heute + Bezug heute − Einspeisung heute | Wh |
-| Verbrauch gesamt | PV gesamt + Bezug gesamt − Einspeisung gesamt | kWh |
-
-Fronius hat keinen eigenen Zähler für den Hausverbrauch, deshalb wird die Energie aus den anderen Zählern berechnet. Das gilt für Anlagen ohne Batterie. Der Gesamtwert wird nie kleiner gesendet als zuvor, weil der PV-Zähler seltener aktualisiert wird als das Smart Meter. Die Detailansicht im Energie-Management zeigt den Haushaltskreis nur mit diesem Gerät an, ohne bleibt er grau bei 0 W.
 
 ## Ansicht in free@home
 
@@ -193,6 +182,8 @@ Im Tab **Protokoll** des Add-Ons stehen die Meldungen des Add-Ons:
 
 **Tageswerte stimmen nicht:** Wurde das Add-On im Lauf des Tages zum ersten Mal gestartet, zählen die Werte erst ab diesem Zeitpunkt. Ab dem nächsten Tag sind sie korrekt.
 
+**Haushaltskreis in der Detailansicht zeigt grau „0 W“:** Das ist bekannt. Die Übersicht berechnet den Haushalt korrekt aus Netz + PV, die Detailansicht erwartet dafür einen eigenen Verbrauchszähler. Ein zusätzlicher Verbrauchszähler (Version 1.0.6) hat das Energie-Management aber gestört: Der Netzwert fehlte und der Haushalt war falsch. Deshalb legt das Add-On ihn nicht mehr an. Falls das Gerät *Fronius Hausverbrauch* aus 1.0.6 noch in free@home steht, lösche es dort von Hand.
+
 ## Entwicklung
 
 ### Projektstruktur
@@ -262,10 +253,9 @@ A free@home add-on that reads live data from a Fronius inverter and the Fronius 
 ### Features
 
 - Reads the **Fronius Solar API v1** locally. No cloud or Fronius account required.
-- Creates three virtual devices in free@home:
+- Creates two virtual devices in free@home:
   - **Fronius Wechselrichter** (inverter): PV power, energy today and total, self-consumption and self-sufficiency
   - **Fronius Smart Meter** (grid meter): grid power, excess power, imported and exported energy (today and total)
-  - **Fronius Hausverbrauch** (household meter): current household consumption, consumption today and total
 - Calculates daily values itself if the inverter doesn't provide them (e.g. GEN24).
 - Marks the devices as *unresponsive* when the inverter doesn't answer and recovers automatically.
 - IP address, port and polling interval are configurable in the free@home UI.
@@ -291,7 +281,7 @@ Tested with a **Fronius GEN24** and a **Fronius Smart Meter 63A** (no battery).
 4. Open the add-on **Fronius Wechselrichter** and check the settings.
 5. Set the status to **active**.
 
-The devices *Fronius Wechselrichter*, *Fronius Smart Meter* and *Fronius Hausverbrauch* then appear in free@home and can be assigned to a room.
+The devices *Fronius Wechselrichter* and *Fronius Smart Meter* then appear in free@home and can be assigned to a room.
 
 ### Settings
 
@@ -313,10 +303,6 @@ Changes are applied immediately. Most Fronius devices use port `80`; an interval
 | Grid meter | Current power | `Site.P_Grid` (> 0 import, < 0 feed-in) |
 | Grid meter | Excess power | `max(0, −P_Grid)` |
 | Grid meter | Imported / exported energy | `EnergyReal_WAC_Sum_Consumed` / `_Produced` |
-| Household meter | Current power | `Site.P_Load` (absolute value) |
-| Household meter | Consumption today / total | PV + grid import − grid feed-in (calculated) |
-
-Fronius has no dedicated household energy counter, so the add-on calculates it from the other counters (systems without battery). The total is never sent lower than before, because the PV counter updates less often than the Smart Meter. The detail view of the energy management only shows the household circle with this device; without it, the circle stays grey at 0 W.
 
 free@home calculates the household consumption as grid + PV. PV power is therefore sent as a **positive** value, even though the SDK documentation describes values ≤ 0 for inverters; with negative values the SysAP shows a negative production and a wrong household value. Total counters are sent as whole kWh, because the SysAP rejects decimals.
 
@@ -339,6 +325,8 @@ Check the **Protokoll** (log) tab of the add-on:
 | `Fronius-Abfrage fehlgeschlagen: HTTP 404 …` | Solar API disabled or wrong port. |
 | `<Wert>: konnte nicht gesetzt werden …` | The SysAP rejected a value; the message names the value. |
 | `Tageswerte gesendet: …` | Daily values sent to free@home (logged every 15 minutes). |
+
+**Household circle in the detail view shows a grey "0 W":** This is a known limitation. The overview calculates the household correctly from grid + PV, but the detail view expects a separate consumption meter. Adding one (version 1.0.6) disturbed the energy management: the grid value disappeared and the household value was wrong. The add-on therefore no longer creates it. If the device *Fronius Hausverbrauch* from 1.0.6 is still listed in free@home, delete it manually.
 
 ### Development
 
