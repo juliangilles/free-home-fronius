@@ -1,0 +1,54 @@
+{
+  "id": "de.julian-gilles.fronius",
+  "version": "1.0.5",
+  "name": {
+    "en": "Fronius Inverter",
+    "de": "Fronius Wechselrichter"
+  },
+  "description": {
+    "en": "Shows live data of a Fronius inverter (Solar API v1) and its Smart Meter in free@home.",
+    "de": "Zeigt Live-Daten eines Fronius Wechselrichters (Solar API v1) und des Smart Meters in free@home an."
+  },
+  "license": "MIT",
+  "author": "Julian Gilles",
+  "url": "https://www.fronius.com",
+  "type": "app",
+  "entryPoint": "build/main.js",
+  "minSysapVersion": "3.0.0",
+  "accessControl": {
+    "networkAccess": true
+  },
+  "parameters": {
+    "default": {
+      "name": "Fronius",
+      "name@de": "Fronius",
+      "items": {
+        "host": {
+          "name": "Inverter IP address",
+          "name@de": "IP-Adresse Wechselrichter",
+          "type": "ipv4",
+          "required": true,
+          "default": "192.168.150.10"
+        },
+        "port": {
+          "name": "HTTP port",
+          "name@de": "HTTP-Port",
+          "type": "number",
+          "required": true,
+          "min": 1,
+          "max": 65535,
+          "default": 8080
+        },
+        "pollInterval": {
+          "name": "Polling interval (seconds)",
+          "name@de": "Abfrageintervall (Sekunden)",
+          "type": "number",
+          "required": true,
+          "min": 2,
+          "max": 300,
+          "default": 10
+        }
+      }
+    }
+  }
+}

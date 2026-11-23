@@ -1,0 +1,26 @@
+{
+  "name": "free-at-home-fronius",
+  "version": "1.0.5",
+  "description": "free@home Add-On für Fronius Wechselrichter (Solar API v1)",
+  "main": "build/main.js",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/main.js",
+    "dev": "npm run build && node build/main.js",
+    "probe": "npm run build && node build/probe.js",
+    "validate": "free-at-home-cli validate",
+    "pack": "npm run build && free-at-home-cli buildscriptarchive build",
+    "journal": "free-at-home-cli journal"
+  },
+  "license": "MIT",
+  "author": "Julian Gilles",
+  "dependencies": {
+    "@busch-jaeger/free-at-home": "^0.37.0"
+  },
+  "devDependencies": {
+    "@busch-jaeger/free-at-home-cli": "^0.13.1",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5"
+  }
+}
