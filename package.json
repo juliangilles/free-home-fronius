@@ -1,6 +1,6 @@
 {
   "name": "free-at-home-fronius",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "free@home Add-On für Fronius Wechselrichter (Solar API v1)",
   "main": "build/main.js",
   "private": true,
